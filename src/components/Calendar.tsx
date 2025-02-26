@@ -90,9 +90,10 @@ export const Calendar = ({ initialDate = new Date() }: CalendarProps) => {
     };
 
     return (
-        <div className="h-full flex flex-col bg-white overflow-y-auto custom-scrollbar">
-            <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
+        <div className="h-full flex flex-col bg-white overflow-y-auto custom-scrollbar w-full">
+            {/* Calendar Header and Month Selector - Sticky at top */}
+            <div className="p-5 pb-2 bg-white sticky top-0 z-10">
+                <div className="flex justify-between items-center mb-5">
                     <h2 className="text-2xl font-bold">Today's Schedule</h2>
                     <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
                         <button className="p-2 rounded-md bg-white shadow-sm">
@@ -108,7 +109,7 @@ export const Calendar = ({ initialDate = new Date() }: CalendarProps) => {
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between items-center mb-5">
                     <button onClick={prevMonth} className="p-1 rounded-full hover:bg-gray-100">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -132,7 +133,7 @@ export const Calendar = ({ initialDate = new Date() }: CalendarProps) => {
                     ))}
                 </div>
 
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-7 gap-1">
                     {calendarDays.map((day, index) => (
                         <div key={index} className="aspect-square">
                             {day !== null && (
@@ -150,29 +151,30 @@ export const Calendar = ({ initialDate = new Date() }: CalendarProps) => {
                 </div>
             </div>
 
-            <div className="border-t border-gray-200 mt-4"></div>
+            <div className="border-t border-gray-200 mt-2"></div>
 
-            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                <div className="space-y-8">
+            {/* Time Slots Section */}
+            <div className="px-5 py-4">
+                <div className="grid grid-cols-1 gap-4">
                     {/* Time slots */}
                     <div className="flex items-start">
-                        <div className="text-sm text-gray-500 w-16">09:00</div>
-                        <div className="border-b border-gray-200 flex-1 pb-8"></div>
+                        <div className="text-sm text-gray-500 w-14">09:00</div>
+                        <div className="border-b border-gray-200 flex-1 pb-4"></div>
                     </div>
 
                     <div className="flex items-start">
-                        <div className="text-sm text-gray-500 w-16">10:00</div>
+                        <div className="text-sm text-gray-500 w-14">10:00</div>
                         <div className="flex-1">
-                            <div className="bg-white rounded-lg border border-gray-200 p-4 relative">
+                            <div className="bg-white rounded-lg border border-gray-200 p-3 relative">
                                 <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500 rounded-l-lg"></div>
                                 <div className="pl-2">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <div className="text-base font-medium">VASCloud Ser...</div>
+                                            <div className="text-base font-medium">VASCloud Service</div>
                                             <div className="text-sm text-gray-500">10:00am - 12:00pm</div>
                                         </div>
                                         <button className="text-gray-400">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                                             </svg>
                                         </button>
@@ -183,14 +185,14 @@ export const Calendar = ({ initialDate = new Date() }: CalendarProps) => {
                     </div>
 
                     <div className="flex items-start">
-                        <div className="text-sm text-gray-500 w-16">11:00</div>
-                        <div className="border-b border-gray-200 flex-1 pb-8"></div>
+                        <div className="text-sm text-gray-500 w-14">11:00</div>
+                        <div className="border-b border-gray-200 flex-1 pb-4"></div>
                     </div>
 
                     <div className="flex items-start">
-                        <div className="text-sm text-gray-500 w-16">12:00</div>
+                        <div className="text-sm text-gray-500 w-14">12:00</div>
                         <div className="flex-1">
-                            <div className="bg-white rounded-lg border border-gray-200 p-4 relative">
+                            <div className="bg-white rounded-lg border border-gray-200 p-3 relative">
                                 <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-green-500 rounded-l-lg"></div>
                                 <div className="pl-2">
                                     <div className="flex justify-between items-start">
@@ -199,7 +201,7 @@ export const Calendar = ({ initialDate = new Date() }: CalendarProps) => {
                                             <div className="text-sm text-gray-500">12:00pm - 1:00pm</div>
                                         </div>
                                         <button className="text-gray-400">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                                             </svg>
                                         </button>
@@ -210,13 +212,34 @@ export const Calendar = ({ initialDate = new Date() }: CalendarProps) => {
                     </div>
 
                     <div className="flex items-start">
-                        <div className="text-sm text-gray-500 w-16">01:00</div>
-                        <div className="border-b border-gray-200 flex-1 pb-8"></div>
+                        <div className="text-sm text-gray-500 w-14">01:00</div>
+                        <div className="border-b border-gray-200 flex-1 pb-4"></div>
+                    </div>
+
+                    <div className="flex items-start">
+                        <div className="text-sm text-gray-500 w-14">02:00</div>
+                        <div className="border-b border-gray-200 flex-1 pb-4"></div>
+                    </div>
+
+                    <div className="flex items-start">
+                        <div className="text-sm text-gray-500 w-14">03:00</div>
+                        <div className="border-b border-gray-200 flex-1 pb-4"></div>
+                    </div>
+
+                    <div className="flex items-start">
+                        <div className="text-sm text-gray-500 w-14">04:00</div>
+                        <div className="border-b border-gray-200 flex-1 pb-4"></div>
+                    </div>
+
+                    <div className="flex items-start">
+                        <div className="text-sm text-gray-500 w-14">05:00</div>
+                        <div className="border-b border-gray-200 flex-1 pb-4"></div>
                     </div>
                 </div>
             </div>
 
-            <div className="p-6">
+            {/* Task List at bottom */}
+            <div className="px-5 pt-2 pb-6">
                 <CalendarTaskList />
             </div>
         </div>

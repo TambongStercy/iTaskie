@@ -30,7 +30,7 @@ export const Sidebar: React.FC = () => {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4">
+            <div className="flex-1 p-4">
                 <ul className="space-y-2">
                     <li>
                         <Link
@@ -76,6 +76,20 @@ export const Sidebar: React.FC = () => {
                     </li>
                     <li>
                         <Link
+                            to="/calendar"
+                            className={`flex items-center p-3 rounded-lg ${isActive('/calendar')
+                                ? 'bg-indigo-50 text-indigo-600'
+                                : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Calendar
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
                             to="/settings"
                             className={`flex items-center p-3 rounded-lg ${isActive('/settings')
                                 ? 'bg-indigo-50 text-indigo-600'
@@ -90,17 +104,23 @@ export const Sidebar: React.FC = () => {
                         </Link>
                     </li>
                 </ul>
-            </nav>
+            </div>
 
             {/* Help Center */}
-            <div className="p-4 mt-auto">
-                <div className="bg-gray-900 rounded-xl p-4 text-white relative overflow-hidden">
-                    <div className="absolute -top-6 -right-6 bg-gray-800 rounded-full w-16 h-16 flex items-center justify-center">
-                        <span className="text-2xl">?</span>
+            <div className="p-4">
+                <div className="bg-gray-900 rounded-xl p-4 text-white">
+                    <div className="flex justify-center mb-2">
+                        <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
                     </div>
-                    <h3 className="text-lg font-bold mb-2">Help Center</h3>
-                    <p className="text-sm text-gray-300 mb-4">Having Trouble in Learning. Please contact us for more questions.</p>
-                    <button className="bg-white text-gray-900 px-4 py-2 rounded-lg text-sm font-medium w-full">
+                    <h3 className="text-center font-medium mb-1">Help Center</h3>
+                    <p className="text-xs text-gray-400 text-center mb-3">
+                        Having trouble in Learning. Please contact us for more questions.
+                    </p>
+                    <button className="w-full py-2 bg-gray-800 rounded-lg text-sm">
                         Go To Help Center
                     </button>
                 </div>

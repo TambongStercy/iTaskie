@@ -4,6 +4,8 @@ import { useAuth } from './contexts/AuthContext';
 import { Dashboard } from './pages/Dashboard';
 import { TaskPage } from './pages/TaskPage';
 import { Login, Signup, ForgotPassword, ResetPassword } from './pages/auth';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -50,6 +52,22 @@ export const router = createBrowserRouter([
         element: (
             <ProtectedRoute>
                 <TaskPage />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: '/analytics',
+        element: (
+            <ProtectedRoute>
+                <AnalyticsPage />
+            </ProtectedRoute>
+        ),
+    },
+    {
+        path: '/settings',
+        element: (
+            <ProtectedRoute>
+                <SettingsPage />
             </ProtectedRoute>
         ),
     },

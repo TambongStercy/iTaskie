@@ -14,6 +14,14 @@ export interface Task {
     created_at: string;
 }
 
+// Team member interface
+export interface TeamMember {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+}
+
 interface TaskStore {
     tasks: Task[];
     isLoading: boolean;
@@ -24,6 +32,15 @@ interface TaskStore {
     deleteTask: (taskId: string) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
+}
+
+// Team member store interface
+interface TeamMemberStore {
+    teamMembers: TeamMember[];
+    setTeamMembers: (members: TeamMember[]) => void;
+    addTeamMember: (member: TeamMember) => void;
+    updateTeamMember: (member: TeamMember) => void;
+    deleteTeamMember: (memberId: number) => void;
 }
 
 // Initialize with some mock tasks
@@ -50,6 +67,13 @@ const mockTasks: Task[] = [
     }
 ];
 
+// Initialize with mock team members
+const mockTeamMembers: TeamMember[] = [
+    { id: 1, name: 'Xi Jing', email: 'xijing@gmail.com', role: 'Team Leader, TL' },
+    { id: 2, name: 'Mougnutou Ghislain', email: 'mougnutoughislain@gmail.com', role: 'Product Manager, PM' },
+    { id: 3, name: 'Dogmo Tsiaze Emilienne', email: 'dogmotsiaze@gmail.com', role: 'Mentor' },
+];
+
 export const useTaskStore = create<TaskStore>((set) => ({
     tasks: mockTasks, // Initialize with mock tasks
     isLoading: false,
@@ -66,4 +90,21 @@ export const useTaskStore = create<TaskStore>((set) => ({
         })),
     setLoading: (loading) => set({ isLoading: loading }),
     setError: (error) => set({ error }),
+}));
+
+// Create team member store
+export const useTeamMemberStore = create<TeamMemberStore>((set) => ({
+    teamMembers: mockTeamMembers,
+    setTeamMembers: (teamMembers) => set({ teamMembers }),
+    addTeamMember: (member) => set((state) => ({
+        teamMembers: [...state.teamMembers, member]
+    })),
+    updateTeamMember: (member) => set((state) => ({
+        teamMembers: state.teamMembers.map((m) =>
+            m.id === member.id ? member : m
+        ),
+    })),
+    deleteTeamMember: (memberId) => set((state) => ({
+        teamMembers: state.teamMembers.filter((m) => m.id !== memberId),
+    })),
 })); 

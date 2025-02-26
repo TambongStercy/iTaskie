@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/AuthLayout';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Signup = () => {
     const navigate = useNavigate();
+    const { signUp, signIn } = useAuth();
     const [step, setStep] = useState(1);
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -24,44 +26,44 @@ export const Signup = () => {
         return password.length >= 6;
     };
 
-    const handleSignup = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        setError(null);
 
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
-            setLoading(false);
-            return;
-        }
-
-        if (!validatePassword(password)) {
-            setError('Password must be at least 6 characters long');
-            setLoading(false);
+        if (!email || !password || !firstName || !lastName) {
+            setError('Please fill in all required fields');
             return;
         }
 
         try {
-            // Mock user data collection
+            setError('');
+            setLoading(true);
+
+            // Register the user
             const userData = {
                 first_name: firstName,
-                last_name: lastName,
-                department,
-                country,
-                phone_number: phoneNumber,
-                timezone,
+                last_name: lastName
             };
 
-            // Mock signup success - remove actual backend call
-            // const { error } = await signUp(email, password, userData);
+            const { data, error: signUpError } = await signUp(email, password, userData);
 
-            // Simulate a delay for the mock signup
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (signUpError) {
+                throw new Error(signUpError.message);
+            }
 
-            // Move to verification step
-            setStep(2);
-        } catch (error) {
-            setError('An error occurred during signup');
+            // Sign in the user immediately after signup (skipping email verification)
+            const { error: signInError } = await signIn(email, password);
+
+            if (signInError) {
+                throw new Error(signInError.message);
+            }
+
+            // Successful signup and login, redirect to dashboard
+            navigate('/dashboard');
+        } catch (err) {
+            const errorMessage = err instanceof Error
+                ? err.message
+                : 'An unexpected error occurred';
+            setError('Failed to create an account: ' + errorMessage);
         } finally {
             setLoading(false);
         }
@@ -171,7 +173,7 @@ export const Signup = () => {
                 </div>
             )}
 
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -342,7 +344,7 @@ export const Signup = () => {
                     disabled={loading}
                     className="w-full btn btn-primary py-2.5"
                 >
-                    {loading ? 'Signing up...' : 'Sign Up'}
+                    {loading ? 'Creating account...' : 'Sign Up'}
                 </button>
 
                 <button

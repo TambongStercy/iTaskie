@@ -43,7 +43,7 @@ export const Dashboard = () => {
                                     <span className="absolute top-0 right-0 h-3 w-3 bg-red-500 rounded-full border-2 border-white"></span>
                                 </button>
                                 <img
-                                    src="https://randomuser.me/api/portraits/women/44.jpg"
+                                    src="user.svg"
                                     alt="User profile"
                                     className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
                                 />

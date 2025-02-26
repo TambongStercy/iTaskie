@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-// Remove the actual supabase import
-// import { supabase } from '../api/supabase';
+
+// Re-enable the Supabase import
+import { supabase } from '../api/supabase';
 
 interface AuthContextType {
     user: any;
@@ -18,82 +19,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Mock getting the user session
+        // Get initial session from Supabase
         const getUser = async () => {
-            // Simulate a delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Check if we have a user in localStorage (for mock persistence)
-            const storedUser = localStorage.getItem('mockUser');
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
             setLoading(false);
         };
 
         getUser();
 
-        // No need for auth state change listener in mock implementation
+        // Set up listener for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            (_event, session) => {
+                setUser(session?.user ?? null);
+            }
+        );
 
         return () => {
-            // No cleanup needed for mock implementation
+            subscription.unsubscribe();
         };
     }, []);
 
     const signIn = async (email: string, password: string) => {
-        // Mock sign in
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Create a mock user
-        const mockUser = {
-            id: '123456',
-            email,
-            user_metadata: {
-                first_name: 'John',
-                last_name: 'Doe'
-            }
-        };
-
-        // Store in state and localStorage for persistence
-        setUser(mockUser);
-        localStorage.setItem('mockUser', JSON.stringify(mockUser));
-
-        return { data: { user: mockUser, session: { access_token: 'mock_token' } }, error: null };
+        return await supabase.auth.signInWithPassword({ email, password });
     };
 
     const signUp = async (email: string, password: string, userData: any) => {
-        // Mock sign up
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Create a mock user with the provided metadata
-        const mockUser = {
-            id: '123456',
+        return await supabase.auth.signUp({
             email,
-            user_metadata: userData
-        };
-
-        // In a real implementation, we wouldn't set the user here since they need to verify email
-
-        return { data: { user: mockUser }, error: null };
+            password,
+            options: {
+                data: userData
+            }
+        });
     };
 
     const signOut = async () => {
-        // Mock sign out
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Clear user from state and localStorage
-        setUser(null);
-        localStorage.removeItem('mockUser');
-
-        return { error: null };
+        return await supabase.auth.signOut();
     };
 
     const resetPassword = async (email: string) => {
-        // Mock reset password
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        return { error: null };
+        return await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        });
     };
 
     const value = {

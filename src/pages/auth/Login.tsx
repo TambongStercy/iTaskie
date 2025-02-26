@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/AuthLayout';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Login = () => {
     const navigate = useNavigate();
@@ -10,34 +11,33 @@ export const Login = () => {
     const [error, setError] = useState<string | null>(null);
     const [rememberMe, setRememberMe] = useState(false);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const { signIn } = useAuth();
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        setError(null);
+
+        if (!email || !password) {
+            setError('Please fill in all fields');
+            return;
+        }
 
         try {
-            // Mock login success - remove actual backend call
-            // const { error } = await signIn(email, password);
-            // if (error) throw error;
+            setError('');
+            setLoading(true);
 
-            // Simulate a delay for the mock login
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const { data, error } = await signIn(email, password);
 
-            // Store mock user in localStorage for persistence
-            const mockUser = {
-                id: '123456',
-                email,
-                user_metadata: {
-                    first_name: 'John',
-                    last_name: 'Doe'
-                }
-            };
-            localStorage.setItem('mockUser', JSON.stringify(mockUser));
+            if (error) {
+                throw new Error(error.message);
+            }
 
-            // Navigate to dashboard after successful login
-            navigate('/');
-        } catch (error) {
-            setError('An error occurred during login');
+            // Successful login, redirect to dashboard
+            navigate('/dashboard');
+        } catch (err) {
+            const errorMessage = err instanceof Error
+                ? err.message
+                : 'An unexpected error occurred';
+            setError('Failed to sign in: ' + errorMessage);
         } finally {
             setLoading(false);
         }
@@ -88,7 +88,7 @@ export const Login = () => {
                 </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                         Email
@@ -157,7 +157,7 @@ export const Login = () => {
                     disabled={loading}
                     className="w-full btn btn-primary py-2.5"
                 >
-                    {loading ? 'Logging in...' : 'Login'}
+                    {loading ? 'Signing in...' : 'Sign In'}
                 </button>
             </form>
 
