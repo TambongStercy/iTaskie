@@ -1,14 +1,16 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import './index.css'
+import './App.css'
 import { RouterProvider } from 'react-router-dom'
-import { router } from './router'
-import { AuthProvider } from './contexts/AuthContext'
-import './styles.css'
+import { router } from './router.tsx'
+import { initEmailJS } from './utils/emailjs-config.tsx'
+
+// Initialize EmailJS early
+initEmailJS();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <RouterProvider router={router} />
   </React.StrictMode>,
 )

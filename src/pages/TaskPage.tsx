@@ -7,6 +7,7 @@ import emailjs from '@emailjs/browser';
 import { supabase, testSupabaseConnection, isSupabaseConfigured } from '../api/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { SupabaseSetupModal } from '../components/SupabaseSetupModal';
+import { sendPdfReport } from '../api/email';
 
 // Add type for the autoTable function that works with jsPDF
 type AutoTableFunction = (doc: jsPDF, options: AutoTableOptions) => void;
@@ -287,6 +288,21 @@ const TaskFormModal: React.FC<{
             task?.is_at_risk ? 'at_risk' :
                 task?.is_on_track ? 'on_track' : 'off_track'
     );
+    const [titleError, setTitleError] = useState('');
+    const [descriptionError, setDescriptionError] = useState('');
+
+    // Format date for date input (YYYY-MM-DD format required by HTML date inputs)
+    const formatDateForInput = (dateString: string) => {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
+
+            return date.toISOString().split('T')[0];
+        } catch (error) {
+            return '';
+        }
+    };
 
     // Update states when task prop changes
     useEffect(() => {
@@ -295,8 +311,8 @@ const TaskFormModal: React.FC<{
             setProject(task.category);
             setStatus(task.status);
             setDescription(task.description);
-            setStartDate(task.start_date);
-            setEndDate(task.end_date);
+            setStartDate(formatDateForInput(task.start_date));
+            setEndDate(formatDateForInput(task.end_date));
             setTrackStatus(
                 task.is_completed ? 'completed' :
                     task.is_at_risk ? 'at_risk' :
@@ -307,7 +323,33 @@ const TaskFormModal: React.FC<{
 
     if (!isOpen) return null;
 
+    const validateForm = () => {
+        let isValid = true;
+
+        // Validate title
+        if (!title.trim()) {
+            setTitleError('Title is required');
+            isValid = false;
+        } else {
+            setTitleError('');
+        }
+
+        // Validate description
+        if (!description.trim()) {
+            setDescriptionError('Description is required');
+            isValid = false;
+        } else {
+            setDescriptionError('');
+        }
+
+        return isValid;
+    };
+
     const handleSubmit = () => {
+        if (!validateForm()) {
+            return;
+        }
+
         const updatedTask: Partial<Task> = {
             title,
             category: project,
@@ -342,22 +384,30 @@ const TaskFormModal: React.FC<{
                 </div>
 
                 <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Task Title <span className="text-red-500">*</span>
+                    </label>
                     <input
                         type="text"
-                        placeholder="Creating Awesome Mobile Apps |"
-                        className="w-full text-xl font-bold border-none focus:outline-none focus:ring-0"
+                        placeholder="Enter task title"
+                        className={`w-full p-3 text-lg font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${titleError ? 'border-red-500 bg-red-50' : ''}`}
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
+                        required
                     />
+                    {titleError && <p className="mt-1 text-sm text-red-500">{titleError}</p>}
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Project <span className="text-red-500">*</span>
+                    </label>
                     <div className="relative">
                         <select
                             className="w-full p-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             value={project}
                             onChange={(e) => setProject(e.target.value as TaskCategory)}
+                            required
                         >
                             <option value="VASCLOUD">VASCLOUD(Default)</option>
                             <option value="RBT">RBT</option>
@@ -373,12 +423,15 @@ const TaskFormModal: React.FC<{
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Task Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Task Type <span className="text-red-500">*</span>
+                    </label>
                     <div className="relative">
                         <select
                             className="w-full p-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             value={status}
                             onChange={(e) => setStatus(e.target.value as TaskStatus)}
+                            required
                         >
                             <option value="to_do">To-Do</option>
                             <option value="ongoing">Ongoing</option>
@@ -393,18 +446,26 @@ const TaskFormModal: React.FC<{
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">About Task</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        About Task <span className="text-red-500">*</span>
+                    </label>
                     <textarea
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px]"
+                        className={`w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px] ${descriptionError ? 'border-red-500 bg-red-50' : ''}`}
                         placeholder="Tell us, how this tasks going"
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
+                        required
                     ></textarea>
+                    {descriptionError && <p className="mt-1 text-sm text-red-500">{descriptionError}</p>}
                 </div>
 
                 <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Task Status <span className="text-red-500">*</span>
+                    </label>
                     <div className="flex space-x-2">
                         <button
+                            type="button"
                             className={`px-3 py-1 rounded-full flex items-center ${trackStatus === 'on_track'
                                 ? 'bg-green-500 text-white'
                                 : 'bg-gray-100 text-gray-700'
@@ -415,6 +476,7 @@ const TaskFormModal: React.FC<{
                             On Track
                         </button>
                         <button
+                            type="button"
                             className={`px-3 py-1 rounded-full flex items-center ${trackStatus === 'at_risk'
                                 ? 'bg-orange-500 text-white'
                                 : 'bg-gray-100 text-gray-700'
@@ -425,6 +487,7 @@ const TaskFormModal: React.FC<{
                             At Risk
                         </button>
                         <button
+                            type="button"
                             className={`px-3 py-1 rounded-full flex items-center ${trackStatus === 'off_track'
                                 ? 'bg-red-500 text-white'
                                 : 'bg-gray-100 text-gray-700'
@@ -439,45 +502,33 @@ const TaskFormModal: React.FC<{
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                         <div className="relative">
                             <input
-                                type="text"
+                                type="date"
                                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                placeholder="21/02/2025"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                             />
-                            <div className="absolute inset-y-0 right-0 flex items-center px-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </div>
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                         <div className="relative">
                             <input
-                                type="text"
+                                type="date"
                                 className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                placeholder="21/02/2025"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
                             />
-                            <div className="absolute inset-y-0 right-0 flex items-center px-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex justify-end space-x-3">
+                <div className="flex items-center justify-end space-x-4">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
                     >
                         Cancel
                     </button>
@@ -485,7 +536,7 @@ const TaskFormModal: React.FC<{
                         onClick={handleSubmit}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                     >
-                        {mode === 'create' ? 'Create New Task' : 'Save'}
+                        {mode === 'create' ? 'Create Task' : 'Update Task'}
                     </button>
                 </div>
             </div>
@@ -541,6 +592,23 @@ const TaskCard: React.FC<{
     onDelete: (task: Task) => void
 }> = ({ task, onEdit, onMove, onDelete }) => {
     const [showOptions, setShowOptions] = useState(false);
+
+    // Format date helper function
+    const formatDate = (dateString: string) => {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString; // Return original if invalid
+
+            // Format as DD/MM/YYYY
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        } catch (error) {
+            return dateString; // Return original on error
+        }
+    };
 
     const getCategoryBadge = (category: TaskCategory) => {
         switch (category) {
@@ -649,11 +717,11 @@ const TaskCard: React.FC<{
             <div className="flex justify-between items-center mb-4">
                 <div>
                     <div className="text-xs text-gray-500">Start:</div>
-                    <div className="text-sm font-medium">{task.start_date}</div>
+                    <div className="text-sm font-medium">{formatDate(task.start_date)}</div>
                 </div>
                 <div>
                     <div className="text-xs text-gray-500">End:</div>
-                    <div className="text-sm font-medium">{task.end_date}</div>
+                    <div className="text-sm font-medium">{formatDate(task.end_date)}</div>
                 </div>
             </div>
 
@@ -1048,6 +1116,7 @@ interface SendReportModalProps {
     tasks: Task[];
 }
 
+// Fixing function signature to match FC type
 const SendReportModal: React.FC<SendReportModalProps> = ({ onClose, tasks }) => {
     const { teamMembers } = useTeamMemberStore();
     const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
@@ -1080,7 +1149,7 @@ const SendReportModal: React.FC<SendReportModalProps> = ({ onClose, tasks }) => 
         }
     };
 
-    const handleSend = () => {
+    const handleSend = async () => {
         // First verify that jspdf-autotable is properly loaded
         if (!verifyJsPdfAutoTable()) {
             setLoadingMessage('Error: PDF generation library not properly loaded. Please try refreshing the page.');
@@ -1142,45 +1211,45 @@ const SendReportModal: React.FC<SendReportModalProps> = ({ onClose, tasks }) => 
         setLoadingMessage(`Preparing report to send to ${recipient.name}...`);
         setIsGenerating(true);
 
-        // Use setTimeout to allow the loading modal to render before generating the PDF
-        setTimeout(() => {
-            try {
-                // Update loading message
-                setLoadingMessage('Generating PDF...');
+        try {
+            // Update loading message
+            setLoadingMessage('Generating PDF...');
 
-                // Generate PDF for email (instead of saving it)
-                generatePDFForEmail(filteredTasks, recipient);
+            // Generate PDF for email and wait for the result
+            const result = await generatePDFForEmail(filteredTasks, recipient);
 
-                // Update loading message to indicate sending
-                setLoadingMessage(`Sending report to ${recipient.name}...`);
+            if (result.success) {
+                // Update loading message to indicate success
+                setLoadingMessage(`Report successfully sent to ${recipient.name}!`);
 
-                // Simulate email sending delay
+                // Hide loading modal and close the modal after a delay
                 setTimeout(() => {
-                    setLoadingMessage(`Report successfully sent to ${recipient.name}!`);
-
-                    // Hide loading modal and close the export modal after sending
-                    setTimeout(() => {
-                        setIsGenerating(false);
-                        onClose();
-                    }, 1500);
+                    setIsGenerating(false);
+                    onClose();
                 }, 1500);
-            } catch (error) {
-                console.error('Error generating PDF:', error);
-                // Display more detailed error information
-                const errorMessage = error instanceof Error
-                    ? `Error: ${error.message}`
-                    : 'Unknown error occurred';
-                setLoadingMessage(`Failed to generate PDF. ${errorMessage}. Please try again.`);
-
+            } else {
+                // Show error message if sending failed
+                setLoadingMessage(`Failed to send report: ${result.message}`);
                 setTimeout(() => {
                     setIsGenerating(false);
                 }, 3000);
             }
-        }, 100);
+        } catch (error) {
+            console.error('Error in send process:', error);
+            // Display more detailed error information
+            const errorMessage = error instanceof Error
+                ? `Error: ${error.message}`
+                : 'Unknown error occurred';
+            setLoadingMessage(`Failed to send report. ${errorMessage}. Please try again.`);
+
+            setTimeout(() => {
+                setIsGenerating(false);
+            }, 3000);
+        }
     };
 
     // Function to generate PDF and send it via email
-    const generatePDFForEmail = (filteredTasks: Task[], recipient: TeamMember) => {
+    const generatePDFForEmail = async (filteredTasks: Task[], recipient: TeamMember) => {
         try {
             // Initialize jsPDF with portrait orientation
             const doc = new jsPDF();
@@ -1200,95 +1269,95 @@ const SendReportModal: React.FC<SendReportModalProps> = ({ onClose, tasks }) => 
 
             // Add date
             doc.setFontSize(10);
-            const today = new Date().toLocaleDateString();
-            doc.text(`Generated on: ${today}`, 14, 30);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
-            // Add filter information
+            // Add recipient information
+            doc.text(`Report for: ${recipient.name} (${recipient.email})`, 14, 38);
+            doc.text(`Role: ${recipient.role}`, 14, 44);
+
+            // Add summary
             doc.setFontSize(12);
-            let yPos = 40;
+            doc.text('Task Summary', 14, 55);
+            doc.setFontSize(10);
+            doc.text(`Total Tasks: ${filteredTasks.length}`, 14, 63);
 
-            doc.text(`Status filter: ${selectedStatus === 'all' ? 'All Tasks' :
-                selectedStatus === 'to_do' ? 'To Do' :
-                    selectedStatus === 'ongoing' ? 'Ongoing' : 'Completed'}`, 14, yPos);
-            yPos += 7;
+            const completedTasks = filteredTasks.filter(task => task.is_completed).length;
+            const pendingTasks = filteredTasks.length - completedTasks;
 
-            if (startDate && endDate) {
-                doc.text(`Date range: ${startDate} to ${endDate}`, 14, yPos);
-                yPos += 7;
-            }
+            doc.text(`Completed Tasks: ${completedTasks}`, 14, 69);
+            doc.text(`Pending Tasks: ${pendingTasks}`, 14, 75);
 
-            // Add total count
-            doc.text(`Total tasks: ${filteredTasks.length}`, 14, yPos);
-            yPos += 10;
-
-            // Prepare table data
-            const tableColumn = [['Title', 'Category', 'Status', 'Start Date', 'End Date']];
+            // Define table columns and data
+            const tableColumn = ["Title", "Status", "Category", "Due Date"];
             const tableRows = filteredTasks.map(task => [
                 task.title,
+                task.status,
                 task.category,
-                task.status === 'to_do' ? 'To Do' :
-                    task.status === 'ongoing' ? 'Ongoing' : 'Completed',
-                task.start_date,
-                task.end_date
+                new Date(task.end_date).toLocaleDateString()
             ]);
 
-            // Generate the table using our properly typed autoTable function
-            autoTable(doc, {
-                head: tableColumn,
-                body: tableRows,
-                startY: yPos,
-                styles: {
-                    fontSize: 10,
-                    cellPadding: 3,
-                    overflow: 'linebreak'
-                },
-                headStyles: {
-                    fillColor: [63, 81, 181],
-                    textColor: 255,
-                    fontStyle: 'bold'
-                },
-                alternateRowStyles: {
-                    fillColor: [240, 240, 240]
-                },
-                margin: { top: 20 }
-            });
+            // Add table to document using autoTable
+            if (typeof (doc as any).autoTable === 'function') {
+                const autoTable = (doc as any).autoTable as AutoTableFunction;
 
-            // Add page number to each page
-            const pageCount = doc.internal.pages.length - 1; // -1 because jsPDF uses 1-based indexing with an empty first page
+                autoTable(doc, {
+                    head: [tableColumn],
+                    body: tableRows,
+                    startY: 85,
+                    styles: { fontSize: 8 },
+                    headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+                    alternateRowStyles: { fillColor: [245, 245, 245] },
+                    margin: { top: 20 }
+                });
+            } else {
+                console.warn('AutoTable plugin is not available. Table could not be generated.');
+                doc.text('Task Data (AutoTable not available):', 14, 85);
+                // Simple fallback if autoTable is not available
+                let y = 95;
+                filteredTasks.forEach((task, i) => {
+                    const status = task.is_completed ? 'Completed' : 'Pending';
+                    doc.text(`${i + 1}. ${task.title} - ${status} - Due: ${new Date(task.end_date).toLocaleDateString()}`, 14, y);
+                    y += 6;
+                });
+            }
+
+            // Add page numbers
+            const pageCount = (doc as any).internal.getNumberOfPages();
             for (let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
                 addPageNumber(i);
             }
 
-            // Function to add page number
             function addPageNumber(pageNumber: number) {
-                doc.setFontSize(10);
-                doc.text(`Page ${pageNumber} of ${pageCount}`, 14, doc.internal.pageSize.height - 10);
+                doc.setFontSize(8);
+                doc.text(`Page ${pageNumber} of ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
             }
 
-            // Convert PDF to base64 string for sending
-            const pdfData = doc.output('datauristring');
+            // Convert PDF to base64
+            const pdfBase64 = doc.output('datauristring').split(',')[1];
 
-            console.log(`Report for ${recipient.name} (${recipient.email}) generated successfully`);
-            console.log('PDF data:', pdfData.substring(0, 100) + '...');
+            // Create email subject
+            const subject = 'Task Report from Taskie App';
 
-            // In a real implementation with EmailJS, you would do something like:
-            // emailjs.send(
-            //     'your_service_id',
-            //     'your_template_id',
-            //     {
-            //         to_name: recipient.name,
-            //         to_email: recipient.email,
-            //         subject: 'Taskie Task Report',
-            //         message: 'Please find attached the task report.',
-            //         pdf_attachment: pdfData
-            //     },
-            //     'your_user_id'
-            // );
+            // Send the email with PDF attachment and styled HTML
+            const result = await sendPdfReport(
+                recipient.email,
+                recipient.name,
+                recipient.role,
+                subject,
+                filteredTasks.length,
+                completedTasks,
+                pendingTasks,
+                pdfBase64
+            );
 
+            return { success: true, message: 'Report sent successfully!' };
         } catch (error) {
-            console.error('Error generating PDF for email:', error);
-            throw error; // Re-throw to be caught by the calling function
+            console.error('Error generating and sending PDF:', error);
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : 'Failed to send report'
+            };
         }
     };
 

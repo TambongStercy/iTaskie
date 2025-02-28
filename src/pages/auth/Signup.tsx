@@ -34,23 +34,41 @@ export const Signup = () => {
             return;
         }
 
+        if (password !== confirmPassword) {
+            setError('Passwords do not match');
+            return;
+        }
+
+        if (!validatePassword(password)) {
+            setError('Password must be at least 6 characters long');
+            return;
+        }
+
         try {
             setError('');
             setLoading(true);
 
-            // Register the user
+            // Create a comprehensive user data object with all profile information
             const userData = {
                 first_name: firstName,
-                last_name: lastName
+                last_name: lastName,
+                department: department || '',
+                country: country || '',
+                phone_number: phoneNumber || '',
+                timezone: timezone || '',
+                language: 'English (Default)',
+                time_format: '24Hours',
+                role: 'User'
             };
 
+            // Register the user with Supabase
             const { data, error: signUpError } = await signUp(email, password, userData);
 
             if (signUpError) {
                 throw new Error(signUpError.message);
             }
 
-            // Sign in the user immediately after signup (skipping email verification)
+            // Sign in the user immediately after signup
             const { error: signInError } = await signIn(email, password);
 
             if (signInError) {

@@ -1,0 +1,18 @@
+{
+    "name": "taskie-scripts",
+    "private": true,
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "populate": "npx tsx populate_database.ts"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.0.0",
+        "dotenv": "^16.0.0",
+        "tsx": "^3.12.0",
+        "uuid": "^9.0.0"
+    },
+    "devDependencies": {
+        "supabase": "^2.15.8"
+    }
+}

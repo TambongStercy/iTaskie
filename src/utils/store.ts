@@ -10,6 +10,7 @@ export interface Task {
     is_completed: boolean;
     priority: 'low' | 'medium' | 'high';
     due_date: string | null;
+    status: 'to_do' | 'ongoing' | 'completed';
     user_id: string;
     created_at: string;
 }
@@ -53,7 +54,8 @@ const mockTasks: Task[] = [
         priority: 'high',
         due_date: new Date(Date.now() + 86400000 * 2).toISOString(), // 2 days from now
         user_id: '123456',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        status: 'to_do'
     },
     {
         id: '2',
@@ -63,15 +65,16 @@ const mockTasks: Task[] = [
         priority: 'medium',
         due_date: new Date().toISOString(),
         user_id: '123456',
-        created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        status: 'completed'
     }
 ];
 
 // Initialize with mock team members
 const mockTeamMembers: TeamMember[] = [
-    { id: 1, name: 'Xi Jing', email: 'xijing@gmail.com', role: 'Team Leader, TL' },
-    { id: 2, name: 'Mougnutou Ghislain', email: 'mougnutoughislain@gmail.com', role: 'Product Manager, PM' },
-    { id: 3, name: 'Dogmo Tsiaze Emilienne', email: 'dogmotsiaze@gmail.com', role: 'Mentor' },
+    { id: 10001, name: 'Xi Jing', email: 'xijing@gmail.com', role: 'Team Leader, TL' },
+    { id: 10002, name: 'Mougnutou Ghislain', email: 'mougnutoughislain@gmail.com', role: 'Product Manager, PM' },
+    { id: 10003, name: 'Dogmo Tsiaze Emilienne', email: 'dogmotsiaze@gmail.com', role: 'Mentor' },
 ];
 
 export const useTaskStore = create<TaskStore>((set) => ({

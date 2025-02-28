@@ -1,15 +1,13 @@
 import React from 'react';
-import { AuthProvider } from './contexts/AuthContext';
+import { Outlet } from 'react-router-dom';
 import './styles.css';
+import { EmailJSInitializer } from './utils/emailjs-config';
 
-function App() {
+export default function App() {
   return (
-    <AuthProvider>
-      <div className="app-container">
-        {/* The router is now handled in main.tsx */}
-      </div>
-    </AuthProvider>
+    <div className="min-h-screen bg-gray-50">
+      <EmailJSInitializer />
+      <Outlet />
+    </div>
   );
 }
-
-export default App;

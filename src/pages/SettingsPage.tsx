@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { useTeamMemberStore, TeamMember } from '../utils/store';
 import { useAuth } from '../contexts/AuthContext';
+import { userService, UserProfile } from '../api/userService';
 
 // Role options for team members
 const ROLE_OPTIONS = [
@@ -236,7 +237,8 @@ const TeamTable: React.FC<{
     members: TeamMember[];
     onEdit: (memberId: number) => void;
     onDelete: (memberId: number) => void;
-}> = ({ members, onEdit, onDelete }) => {
+    isLoading: boolean;
+}> = ({ members, onEdit, onDelete, isLoading }) => {
     const [activePopup, setActivePopup] = useState<number | null>(null);
 
     return (
@@ -248,33 +250,47 @@ const TeamTable: React.FC<{
                 <div className="col-span-3 font-medium">Role</div>
             </div>
             <div className="border-x border-b rounded-b-lg">
-                {members.map((member) => (
-                    <div key={member.id} className="grid grid-cols-12 p-4 border-b last:border-b-0 items-center">
-                        <div className="col-span-1 text-gray-600">{member.id}</div>
-                        <div className="col-span-3 text-gray-800 font-medium">{member.name}</div>
-                        <div className="col-span-5 text-gray-600">{member.email}</div>
-                        <div className="col-span-2 text-gray-800">{member.role}</div>
-                        <div className="col-span-1 flex justify-center relative">
-                            <button
-                                className="text-gray-500"
-                                onClick={() => setActivePopup(activePopup === member.id ? null : member.id)}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                </svg>
-                            </button>
-
-                            {activePopup === member.id && (
-                                <TeamMemberPopup
-                                    isOpen={true}
-                                    onClose={() => setActivePopup(null)}
-                                    onEdit={() => onEdit(member.id)}
-                                    onDelete={() => onDelete(member.id)}
-                                />
-                            )}
-                        </div>
+                {isLoading ? (
+                    <div className="p-8 text-center text-gray-500">
+                        <svg className="animate-spin h-8 w-8 mx-auto mb-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading team members...
                     </div>
-                ))}
+                ) : members.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                        No team members found. Add your first team member by clicking the "Add new members" button.
+                    </div>
+                ) : (
+                    members.map((member) => (
+                        <div key={`team-member-${member.id}`} className="grid grid-cols-12 p-4 border-b last:border-b-0 items-center">
+                            <div className="col-span-1 text-gray-600">{member.id}</div>
+                            <div className="col-span-3 text-gray-800 font-medium">{member.name}</div>
+                            <div className="col-span-5 text-gray-600">{member.email}</div>
+                            <div className="col-span-2 text-gray-800">{member.role}</div>
+                            <div className="col-span-1 flex justify-center relative">
+                                <button
+                                    className="text-gray-500"
+                                    onClick={() => setActivePopup(activePopup === member.id ? null : member.id)}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                    </svg>
+                                </button>
+
+                                {activePopup === member.id && (
+                                    <TeamMemberPopup
+                                        isOpen={true}
+                                        onClose={() => setActivePopup(null)}
+                                        onEdit={() => onEdit(member.id)}
+                                        onDelete={() => onDelete(member.id)}
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );
@@ -292,16 +308,20 @@ export const SettingsPage: React.FC = () => {
     const [editMode, setEditMode] = useState(false);
 
     // State for profile data
-    const [profile, setProfile] = useState({
-        firstName: 'Nyandzo',
-        lastName: 'Onongwene',
-        email: 'nyandzoonongwene@gmail.com',
-        department: 'Cameroon ICT Consulting and System Integration Department',
-        role: 'Frontend Software Engineer, FSE',
+    const [profile, setProfile] = useState<UserProfile>({
+        firstName: '',
+        lastName: '',
+        email: '',
+        department: '',
+        role: '',
         language: 'English (Default)',
-        timezone: 'GMT+1 (Douala)',
+        timezone: '',
         timeFormat: '24Hours'
     });
+
+    // State for loading status
+    const [isLoading, setIsLoading] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     // State for password data
     const [password, setPassword] = useState({
@@ -311,7 +331,7 @@ export const SettingsPage: React.FC = () => {
     });
 
     // State for team data
-    const { teamMembers, setTeamMembers, deleteTeamMember } = useTeamMemberStore();
+    const { teamMembers, setTeamMembers, deleteTeamMember, addTeamMember, updateTeamMember } = useTeamMemberStore();
 
     // State for modals and member management
     const [showMemberModal, setShowMemberModal] = useState(false);
@@ -321,21 +341,138 @@ export const SettingsPage: React.FC = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
 
+    // Fetch user profile on component mount
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            setIsLoading(true);
+            try {
+                const userProfile = await userService.getProfile();
+                if (userProfile) {
+                    setProfile(userProfile);
+                }
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+                setStatusMessage({
+                    type: 'error',
+                    text: 'Failed to load user profile. Please try again.'
+                });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchUserProfile();
+    }, []);
+
+    // Fetch team members on component mount
+    useEffect(() => {
+        const fetchTeamMembers = async () => {
+            try {
+                const members = await userService.getTeamMembers();
+                if (members.length > 0) {
+                    setTeamMembers(members);
+                }
+            } catch (error) {
+                console.error('Error fetching team members:', error);
+            }
+        };
+
+        if (activeTab === 'team') {
+            fetchTeamMembers();
+        }
+    }, [activeTab, setTeamMembers]);
+
     // Toggle edit mode
     const toggleEditMode = () => {
         setEditMode(!editMode);
     };
 
-    // Handle save
-    const handleSave = () => {
-        setEditMode(false);
-        // Here you would typically save the changes to the backend
+    // Handle save profile changes
+    const handleSave = async () => {
+        setIsLoading(true);
+        setStatusMessage(null);
+
+        try {
+            const result = await userService.updateProfile(profile);
+
+            if (result.success) {
+                setStatusMessage({
+                    type: 'success',
+                    text: 'Profile updated successfully'
+                });
+                setEditMode(false);
+            } else {
+                setStatusMessage({
+                    type: 'error',
+                    text: result.error || 'Failed to update profile'
+                });
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            setStatusMessage({
+                type: 'error',
+                text: 'An unexpected error occurred'
+            });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    // Handle cancel
+    // Handle password update
+    const handleUpdatePassword = async () => {
+        setIsLoading(true);
+        setStatusMessage(null);
+
+        // Validate password match
+        if (password.new !== password.confirm) {
+            setStatusMessage({
+                type: 'error',
+                text: 'New passwords do not match'
+            });
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const result = await userService.updatePassword(password.current, password.new);
+
+            if (result.success) {
+                setStatusMessage({
+                    type: 'success',
+                    text: 'Password updated successfully'
+                });
+                // Clear password fields
+                setPassword({
+                    current: '',
+                    new: '',
+                    confirm: ''
+                });
+            } else {
+                setStatusMessage({
+                    type: 'error',
+                    text: result.error || 'Failed to update password'
+                });
+            }
+        } catch (error) {
+            console.error('Error updating password:', error);
+            setStatusMessage({
+                type: 'error',
+                text: 'An unexpected error occurred'
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Handle cancel edit
     const handleCancel = () => {
         setEditMode(false);
-        // Reset any changes made
+        // Reset any changes by refetching the profile
+        userService.getProfile().then(userProfile => {
+            if (userProfile) {
+                setProfile(userProfile);
+            }
+        });
     };
 
     // Determine the title based on active tab and edit mode
@@ -363,39 +500,439 @@ export const SettingsPage: React.FC = () => {
     };
 
     // Confirm delete member
-    const confirmDeleteMember = () => {
+    const confirmDeleteMember = async () => {
         if (memberToDelete !== null) {
-            // Use the store's delete function
-            deleteTeamMember(memberToDelete);
-            setMemberToDelete(null);
-            setShowDeleteConfirm(false);
+            setIsLoading(true);
+            try {
+                const result = await userService.deleteTeamMember(memberToDelete);
+
+                if (result.success) {
+                    // Update local state after successful deletion
+                    deleteTeamMember(memberToDelete);
+                    setStatusMessage({
+                        type: 'success',
+                        text: 'Team member deleted successfully'
+                    });
+                } else {
+                    setStatusMessage({
+                        type: 'error',
+                        text: result.error || 'Failed to delete team member'
+                    });
+                }
+            } catch (error) {
+                console.error('Error deleting team member:', error);
+                setStatusMessage({
+                    type: 'error',
+                    text: 'An unexpected error occurred'
+                });
+            } finally {
+                setIsLoading(false);
+                setMemberToDelete(null);
+                setShowDeleteConfirm(false);
+            }
         }
     };
 
     // Handle member submit (add or update)
-    const handleMemberSubmit = (memberData: { name: string; email: string; role: string }) => {
-        const { addTeamMember, updateTeamMember } = useTeamMemberStore.getState();
+    const handleMemberSubmit = async (memberData: { name: string; email: string; role: string }) => {
+        setIsLoading(true);
+        setStatusMessage(null);
 
-        if (modalMode === 'add') {
-            // Add new member
-            const newMember: TeamMember = {
-                id: teamMembers.length + 1,
-                name: memberData.name,
-                email: memberData.email,
-                role: memberData.role
-            };
-            addTeamMember(newMember);
-        } else if (modalMode === 'edit' && currentMember) {
-            // Update existing member
-            const updatedMember: TeamMember = {
-                ...currentMember,
-                name: memberData.name,
-                email: memberData.email,
-                role: memberData.role
-            };
-            updateTeamMember(updatedMember);
+        try {
+            if (modalMode === 'add') {
+                // Add new member to Supabase
+                const result = await userService.addTeamMember(memberData);
+
+                if (result.success && result.member) {
+                    // Update local state after successful addition
+                    addTeamMember(result.member);
+                    setStatusMessage({
+                        type: 'success',
+                        text: 'Team member added successfully'
+                    });
+                } else {
+                    setStatusMessage({
+                        type: 'error',
+                        text: result.error || 'Failed to add team member'
+                    });
+                }
+            } else if (modalMode === 'edit' && currentMember) {
+                // Update existing member in Supabase
+                const updatedMember: TeamMember = {
+                    ...currentMember,
+                    name: memberData.name,
+                    email: memberData.email,
+                    role: memberData.role
+                };
+
+                const result = await userService.updateTeamMember(updatedMember);
+
+                if (result.success) {
+                    // Update local state after successful update
+                    updateTeamMember(updatedMember);
+                    setStatusMessage({
+                        type: 'success',
+                        text: 'Team member updated successfully'
+                    });
+                } else {
+                    setStatusMessage({
+                        type: 'error',
+                        text: result.error || 'Failed to update team member'
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error managing team member:', error);
+            setStatusMessage({
+                type: 'error',
+                text: 'An unexpected error occurred'
+            });
+        } finally {
+            setIsLoading(false);
+            setShowMemberModal(false);
         }
     };
+
+    // Tab content rendering
+    const renderProfileTab = () => (
+        <div className="space-y-6">
+            {/* Name */}
+            <div className="grid grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-sm font-medium text-indigo-600 mb-2">First name</label>
+                    <input
+                        type="text"
+                        className="w-full p-3 border border-gray-200 rounded-lg"
+                        value={profile.firstName}
+                        readOnly={!editMode}
+                        onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-indigo-600 mb-2">Last name</label>
+                    <input
+                        type="text"
+                        className="w-full p-3 border border-gray-200 rounded-lg"
+                        value={profile.lastName}
+                        readOnly={!editMode}
+                        onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                    />
+                </div>
+            </div>
+
+            {/* Email */}
+            <div>
+                <label className="block text-sm font-medium text-indigo-600 mb-2">Email</label>
+                <div className="flex">
+                    <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </span>
+                    <input
+                        type="email"
+                        className="w-full p-3 border border-gray-200 rounded-r-lg"
+                        value={profile.email}
+                        readOnly={true} // Email cannot be changed after registration
+                        disabled={true}
+                    />
+                </div>
+                {editMode && (
+                    <p className="mt-1 text-xs text-gray-500">Email address cannot be changed after registration</p>
+                )}
+            </div>
+
+            {/* Department */}
+            <div>
+                <label className="block text-sm font-medium text-indigo-600 mb-2">Department</label>
+                <input
+                    type="text"
+                    className="w-full p-3 border border-gray-200 rounded-lg"
+                    value={profile.department}
+                    readOnly={!editMode}
+                    onChange={(e) => setProfile({ ...profile, department: e.target.value })}
+                />
+            </div>
+
+            {/* Role */}
+            <div>
+                <label className="block text-sm font-medium text-indigo-600 mb-2">Role</label>
+                <input
+                    type="text"
+                    className="w-full p-3 border border-gray-200 rounded-lg"
+                    value={profile.role}
+                    readOnly={!editMode}
+                    onChange={(e) => setProfile({ ...profile, role: e.target.value })}
+                />
+            </div>
+
+            {/* Country (if available) */}
+            {profile.country !== undefined && (
+                <div>
+                    <label className="block text-sm font-medium text-indigo-600 mb-2">Country</label>
+                    <input
+                        type="text"
+                        className="w-full p-3 border border-gray-200 rounded-lg"
+                        value={profile.country}
+                        readOnly={!editMode}
+                        onChange={(e) => setProfile({ ...profile, country: e.target.value || '' })}
+                    />
+                </div>
+            )}
+
+            {/* Phone Number (if available) */}
+            {profile.phoneNumber !== undefined && (
+                <div>
+                    <label className="block text-sm font-medium text-indigo-600 mb-2">Phone Number</label>
+                    <input
+                        type="text"
+                        className="w-full p-3 border border-gray-200 rounded-lg"
+                        value={profile.phoneNumber}
+                        readOnly={!editMode}
+                        onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value || '' })}
+                    />
+                </div>
+            )}
+
+            {/* Language */}
+            <div>
+                <label className="block text-sm font-medium text-indigo-600 mb-2">Language</label>
+                <div className="relative">
+                    <select
+                        className="w-full p-3 border border-gray-200 rounded-lg appearance-none"
+                        value={profile.language}
+                        disabled={!editMode}
+                        onChange={(e) => setProfile({ ...profile, language: e.target.value })}
+                    >
+                        <option>English (Default)</option>
+                        <option>French</option>
+                        <option>Spanish</option>
+                        <option>German</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            {/* Timezone */}
+            <div>
+                <label className="block text-sm font-medium text-indigo-600 mb-2">Timezone</label>
+                <div className="relative">
+                    <select
+                        className="w-full p-3 border border-gray-200 rounded-lg appearance-none"
+                        value={profile.timezone}
+                        disabled={!editMode}
+                        onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+                    >
+                        <option value="">Select timezone</option>
+                        <option value="GMT+1 (Douala)">GMT+1 (Douala)</option>
+                        <option value="GMT+0 (London)">GMT+0 (London)</option>
+                        <option value="GMT-5 (New York)">GMT-5 (New York)</option>
+                        <option value="GMT-8 (Los Angeles)">GMT-8 (Los Angeles)</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            {/* Time Format */}
+            <div>
+                <label className="block text-sm font-medium text-indigo-600 mb-2">Time Format</label>
+                <div className="grid grid-cols-2 gap-4">
+                    <label className={`border rounded-lg p-3 flex items-center ${profile.timeFormat === '24Hours' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
+                        <input
+                            type="radio"
+                            className="form-radio h-5 w-5 text-indigo-600"
+                            checked={profile.timeFormat === '24Hours'}
+                            disabled={!editMode}
+                            onChange={() => setProfile({ ...profile, timeFormat: '24Hours' })}
+                        />
+                        <span className="ml-2">24 Hours</span>
+                    </label>
+                    <label className={`border rounded-lg p-3 flex items-center ${profile.timeFormat === '12Hours' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
+                        <input
+                            type="radio"
+                            className="form-radio h-5 w-5 text-indigo-600"
+                            checked={profile.timeFormat === '12Hours'}
+                            disabled={!editMode}
+                            onChange={() => setProfile({ ...profile, timeFormat: '12Hours' })}
+                        />
+                        <span className="ml-2">12 Hours</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderPasswordTab = () => (
+        <div className="grid grid-cols-3 gap-8">
+            <div className="col-span-2 space-y-6">
+                {/* Previous Password */}
+                <div>
+                    <label className="block text-sm font-medium text-indigo-600 mb-2">Previous Password</label>
+                    <div className="relative">
+                        <input
+                            type="password"
+                            className="w-full p-3 border border-gray-200 rounded-lg pr-10"
+                            value={password.current}
+                            onChange={(e) => setPassword({ ...password, current: e.target.value })}
+                        />
+                        <button className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {/* New Password */}
+                <div>
+                    <label className="block text-sm font-medium text-indigo-600 mb-2">New Password</label>
+                    <div className="relative">
+                        <input
+                            type="password"
+                            className="w-full p-3 border border-gray-200 rounded-lg pr-10"
+                            value={password.new}
+                            onChange={(e) => setPassword({ ...password, new: e.target.value })}
+                        />
+                        <button className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Re-Type New Password */}
+                <div>
+                    <label className="block text-sm font-medium text-indigo-600 mb-2">Re-Type New Password</label>
+                    <div className="relative">
+                        <input
+                            type="password"
+                            className="w-full p-3 border border-gray-200 rounded-lg pr-10"
+                            value={password.confirm}
+                            onChange={(e) => setPassword({ ...password, confirm: e.target.value })}
+                        />
+                        <button className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="col-span-1">
+                <PasswordCriteria />
+            </div>
+        </div>
+    );
+
+    const renderTeamTab = () => (
+        <TeamTable
+            members={teamMembers}
+            onEdit={(memberId) => handleEditMember(memberId)}
+            onDelete={(memberId) => handleDeleteMember(memberId)}
+            isLoading={isLoading}
+        />
+    );
+
+    const renderNotificationsTab = () => (
+        <div className="space-y-6">
+            <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-medium mb-4">Email Notifications</h3>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium">Weekly Report</p>
+                            <p className="text-sm text-gray-500">Receive a weekly report summary of your tasks</p>
+                        </div>
+                        <div className="relative">
+                            <label className="switch">
+                                <input type="checkbox" checked={true} />
+                                <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium">Task Assignments</p>
+                            <p className="text-sm text-gray-500">Get notified when you are assigned a new task</p>
+                        </div>
+                        <div className="relative">
+                            <label className="switch">
+                                <input type="checkbox" checked={true} />
+                                <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium">Task Due Date Reminders</p>
+                            <p className="text-sm text-gray-500">Get reminders for upcoming task deadlines</p>
+                        </div>
+                        <div className="relative">
+                            <label className="switch">
+                                <input type="checkbox" checked={false} />
+                                <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-lg p-4">
+                <h3 className="font-medium mb-4">System Notifications</h3>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium">Team Updates</p>
+                            <p className="text-sm text-gray-500">Get notified when team members are added or removed</p>
+                        </div>
+                        <div className="relative">
+                            <label className="switch">
+                                <input type="checkbox" checked={true} />
+                                <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium">Project Updates</p>
+                            <p className="text-sm text-gray-500">Get notified when projects are added or updated</p>
+                        </div>
+                        <div className="relative">
+                            <label className="switch">
+                                <input type="checkbox" checked={false} />
+                                <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium">System Maintenance</p>
+                            <p className="text-sm text-gray-500">Get notified about system maintenance or updates</p>
+                        </div>
+                        <div className="relative">
+                            <label className="switch">
+                                <input type="checkbox" checked={false} />
+                                <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -432,6 +969,24 @@ export const SettingsPage: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Status Message */}
+                    {statusMessage && (
+                        <div className={`mb-4 p-3 rounded-md ${statusMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                            {statusMessage.text}
+                        </div>
+                    )}
+
+                    {/* Loading Indicator */}
+                    {isLoading && (
+                        <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md flex items-center">
+                            <svg className="animate-spin h-5 w-5 mr-3 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Processing...
+                        </div>
+                    )}
+
                     {/* Settings Content */}
                     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                         {/* Header Banner */}
@@ -455,7 +1010,11 @@ export const SettingsPage: React.FC = () => {
                                 </div>
                                 <div className="space-x-4">
                                     {activeTab === 'password' ? (
-                                        <button className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                                        <button
+                                            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                                            onClick={handleUpdatePassword}
+                                            disabled={isLoading}
+                                        >
                                             Change Password
                                         </button>
                                     ) : activeTab === 'team' ? (
@@ -467,6 +1026,7 @@ export const SettingsPage: React.FC = () => {
                                                     setCurrentMember(null);
                                                     setShowMemberModal(true);
                                                 }}
+                                                disabled={isLoading}
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -480,6 +1040,7 @@ export const SettingsPage: React.FC = () => {
                                                 <button
                                                     className="px-6 py-2 rounded-lg border border-transparent bg-indigo-100 text-indigo-700 font-medium hover:bg-indigo-200 transition"
                                                     onClick={toggleEditMode}
+                                                    disabled={isLoading}
                                                 >
                                                     Edit
                                                 </button>
@@ -488,12 +1049,14 @@ export const SettingsPage: React.FC = () => {
                                                     <button
                                                         className="px-6 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
                                                         onClick={handleCancel}
+                                                        disabled={isLoading}
                                                     >
                                                         Cancel
                                                     </button>
                                                     <button
-                                                        className="px-6 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                                                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                                                         onClick={handleSave}
+                                                        disabled={isLoading}
                                                     >
                                                         Save
                                                     </button>
@@ -536,316 +1099,10 @@ export const SettingsPage: React.FC = () => {
 
                             {/* Tab Content */}
                             <div>
-                                {/* Profile Tab */}
-                                {activeTab === 'profile' && (
-                                    <div className="space-y-6">
-                                        {/* Name */}
-                                        <div className="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <label className="block text-sm font-medium text-indigo-600 mb-2">First name</label>
-                                                <input
-                                                    type="text"
-                                                    className="w-full p-3 border border-gray-200 rounded-lg"
-                                                    value={profile.firstName}
-                                                    readOnly={!editMode}
-                                                    onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-indigo-600 mb-2">Last name</label>
-                                                <input
-                                                    type="text"
-                                                    className="w-full p-3 border border-gray-200 rounded-lg"
-                                                    value={profile.lastName}
-                                                    readOnly={!editMode}
-                                                    onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Email */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-indigo-600 mb-2">Email</label>
-                                            <div className="flex">
-                                                <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                    </svg>
-                                                </span>
-                                                <input
-                                                    type="email"
-                                                    className="w-full p-3 border border-gray-200 rounded-r-lg"
-                                                    value={profile.email}
-                                                    readOnly={!editMode}
-                                                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Department */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-indigo-600 mb-2">Department</label>
-                                            <input
-                                                type="text"
-                                                className="w-full p-3 border border-gray-200 rounded-lg"
-                                                value={profile.department}
-                                                readOnly={!editMode}
-                                                onChange={(e) => setProfile({ ...profile, department: e.target.value })}
-                                            />
-                                        </div>
-
-                                        {/* Role */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-indigo-600 mb-2">Role</label>
-                                            <input
-                                                type="text"
-                                                className="w-full p-3 border border-gray-200 rounded-lg"
-                                                value={profile.role}
-                                                readOnly={!editMode}
-                                                onChange={(e) => setProfile({ ...profile, role: e.target.value })}
-                                            />
-                                        </div>
-
-                                        {/* Language */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-indigo-600 mb-2">Language</label>
-                                            <div className="relative">
-                                                <select
-                                                    className="w-full p-3 border border-gray-200 rounded-lg appearance-none"
-                                                    value={profile.language}
-                                                    disabled={!editMode}
-                                                    onChange={(e) => setProfile({ ...profile, language: e.target.value })}
-                                                >
-                                                    <option>English (Default)</option>
-                                                    <option>French</option>
-                                                    <option>Spanish</option>
-                                                    <option>German</option>
-                                                </select>
-                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Timezone */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-indigo-600 mb-2">Timezone</label>
-                                            <div className="relative">
-                                                <select
-                                                    className="w-full p-3 border border-gray-200 rounded-lg appearance-none"
-                                                    value={profile.timezone}
-                                                    disabled={!editMode}
-                                                    onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                                                >
-                                                    <option>GMT+1 (Douala)</option>
-                                                    <option>GMT+0 (London)</option>
-                                                    <option>GMT-5 (New York)</option>
-                                                    <option>GMT-8 (Los Angeles)</option>
-                                                </select>
-                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Time Format */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-indigo-600 mb-2">Timezone</label>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <label className={`border rounded-lg p-3 flex items-center ${profile.timeFormat === '24Hours' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
-                                                    <input
-                                                        type="radio"
-                                                        className="form-radio h-5 w-5 text-indigo-600"
-                                                        checked={profile.timeFormat === '24Hours'}
-                                                        disabled={!editMode}
-                                                        onChange={() => setProfile({ ...profile, timeFormat: '24Hours' })}
-                                                    />
-                                                    <span className="ml-2">24 Hours</span>
-                                                </label>
-                                                <label className={`border rounded-lg p-3 flex items-center ${profile.timeFormat === '12Hours' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'}`}>
-                                                    <input
-                                                        type="radio"
-                                                        className="form-radio h-5 w-5 text-indigo-600"
-                                                        checked={profile.timeFormat === '12Hours'}
-                                                        disabled={!editMode}
-                                                        onChange={() => setProfile({ ...profile, timeFormat: '12Hours' })}
-                                                    />
-                                                    <span className="ml-2">12 Hours</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Password Tab */}
-                                {activeTab === 'password' && (
-                                    <div className="grid grid-cols-3 gap-8">
-                                        <div className="col-span-2 space-y-6">
-                                            {/* Previous Password */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-indigo-600 mb-2">Previous Password</label>
-                                                <div className="relative">
-                                                    <input
-                                                        type="password"
-                                                        className="w-full p-3 border border-gray-200 rounded-lg pr-10"
-                                                        value={password.current}
-                                                        onChange={(e) => setPassword({ ...password, current: e.target.value })}
-                                                    />
-                                                    <button className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* New Password */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-indigo-600 mb-2">New Password</label>
-                                                <div className="relative">
-                                                    <input
-                                                        type="password"
-                                                        className="w-full p-3 border border-gray-200 rounded-lg pr-10"
-                                                        value={password.new}
-                                                        onChange={(e) => setPassword({ ...password, new: e.target.value })}
-                                                    />
-                                                    <button className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Re-Type New Password */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-indigo-600 mb-2">Re-Type New Password</label>
-                                                <div className="relative">
-                                                    <input
-                                                        type="password"
-                                                        className="w-full p-3 border border-gray-200 rounded-lg pr-10"
-                                                        value={password.confirm}
-                                                        onChange={(e) => setPassword({ ...password, confirm: e.target.value })}
-                                                    />
-                                                    <button className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="col-span-1">
-                                            <PasswordCriteria />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Team Tab */}
-                                {activeTab === 'team' && (
-                                    <TeamTable
-                                        members={teamMembers}
-                                        onEdit={(memberId) => handleEditMember(memberId)}
-                                        onDelete={(memberId) => handleDeleteMember(memberId)}
-                                    />
-                                )}
-
-                                {/* Notifications Tab */}
-                                {activeTab === 'notifications' && (
-                                    <div className="space-y-6">
-                                        <div className="border border-gray-200 rounded-lg p-4">
-                                            <h3 className="font-medium mb-4">Email Notifications</h3>
-                                            <div className="space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">Weekly Report</p>
-                                                        <p className="text-sm text-gray-500">Receive a weekly report summary of your tasks</p>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <label className="switch">
-                                                            <input type="checkbox" checked={true} />
-                                                            <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">Task Assignments</p>
-                                                        <p className="text-sm text-gray-500">Get notified when you are assigned a new task</p>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <label className="switch">
-                                                            <input type="checkbox" checked={true} />
-                                                            <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">Task Due Date Reminders</p>
-                                                        <p className="text-sm text-gray-500">Get reminders for upcoming task deadlines</p>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <label className="switch">
-                                                            <input type="checkbox" checked={false} />
-                                                            <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="border border-gray-200 rounded-lg p-4">
-                                            <h3 className="font-medium mb-4">System Notifications</h3>
-                                            <div className="space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">Team Updates</p>
-                                                        <p className="text-sm text-gray-500">Get notified when team members are added or removed</p>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <label className="switch">
-                                                            <input type="checkbox" checked={true} />
-                                                            <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">Project Updates</p>
-                                                        <p className="text-sm text-gray-500">Get notified when projects are added or updated</p>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <label className="switch">
-                                                            <input type="checkbox" checked={false} />
-                                                            <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">System Maintenance</p>
-                                                        <p className="text-sm text-gray-500">Get notified about system maintenance or updates</p>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <label className="switch">
-                                                            <input type="checkbox" checked={false} />
-                                                            <span className="w-10 h-5 bg-gray-200 rounded-full transition"></span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                {activeTab === 'profile' && renderProfileTab()}
+                                {activeTab === 'password' && renderPasswordTab()}
+                                {activeTab === 'team' && renderTeamTab()}
+                                {activeTab === 'notifications' && renderNotificationsTab()}
                             </div>
                         </div>
                     </div>
@@ -874,14 +1131,16 @@ export const SettingsPage: React.FC = () => {
                                         setShowDeleteConfirm(false);
                                         setMemberToDelete(null);
                                     }}
+                                    disabled={isLoading}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     className="px-4 py-2 bg-red-500 text-white rounded-lg"
                                     onClick={confirmDeleteMember}
+                                    disabled={isLoading}
                                 >
-                                    Delete
+                                    {isLoading ? 'Deleting...' : 'Delete'}
                                 </button>
                             </div>
                         </div>
