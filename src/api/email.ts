@@ -58,12 +58,18 @@ export const sendEmailWithEmailJS = async (
     emailData?: any // Additional data for the template
 ) => {
     try {
+        console.log(`Preparing to send email to: ${to}`);
+        console.log(`PDF attachment: ${attachmentName} (${Math.round(pdfBase64.length / 1024)} KB)`);
+
         // Make sure your EmailJS service is set up to handle these template parameters
         const templateParams = {
             to_email: to,
             subject: subject,
             message: text,
-            attachment_data: pdfBase64,
+            // PDF must be properly formatted as a base64 string without the data URI prefix
+            attachment_data: pdfBase64.startsWith('data:')
+                ? pdfBase64.split(',')[1]
+                : pdfBase64,
             attachment_name: attachmentName,
             // Include all the formatted data_ variables if provided
             ...(emailData || {})
@@ -78,6 +84,7 @@ export const sendEmailWithEmailJS = async (
             throw new Error('Missing EmailJS configuration. Please set the required environment variables.');
         }
 
+        console.log('Sending email via EmailJS...');
         const response = await emailjs.send(
             serviceId,
             templateId,
@@ -85,6 +92,7 @@ export const sendEmailWithEmailJS = async (
             userId
         );
 
+        console.log('Email sent via EmailJS successfully!', response);
         return {
             success: true,
             message: 'Email sent successfully',

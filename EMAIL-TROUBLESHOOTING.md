@@ -100,6 +100,62 @@ import { testEmailJS } from './src/utils/test-email';
 await testEmailJS();
 ```
 
+You can also use the new testing component we've added:
+
+```typescript
+import EmailTester from './src/components/EmailTester';
+
+// Add this component to any page to test email functionality
+<EmailTester />
+```
+
+## PDF Attachment Issues
+
+If you're specifically having problems with PDF attachments:
+
+1. **Template Configuration**
+   
+   Make sure your EmailJS template has this exact code for attachments:
+   
+   ```
+   <attachment>
+     {
+       "filename": "{{attachment_name}}",
+       "data": "{{attachment_data}}"
+     }
+   </attachment>
+   ```
+
+2. **Base64 Encoding**
+   
+   PDF files must be encoded properly. Make sure:
+   - PDF is converted to base64 correctly
+   - The data URI prefix (`data:application/pdf;base64,`) is removed before sending
+
+3. **PDF Size Limits**
+   
+   - EmailJS has attachment size limits (typically 5-10MB)
+   - If your PDF is too large, try reducing its quality or size
+   - Add compression to the PDF generation step if needed
+
+4. **Testing PDF Attachments**
+   
+   Use our dedicated PDF attachment test:
+   
+   ```typescript
+   import { testPdfAttachment } from './src/utils/test-email';
+   
+   // Send a test email with PDF attachment
+   await testPdfAttachment('your@email.com');
+   ```
+
+5. **Provider Restrictions**
+   
+   Some email providers (Gmail, Outlook) may filter or block emails with PDF attachments from services like EmailJS. Try:
+   - Using a different recipient email address
+   - Checking spam/junk folders
+   - Verifying with your email provider about attachment policies
+
 ## Choosing a Primary Method
 
 If you continue having trouble with the Supabase Edge Function:

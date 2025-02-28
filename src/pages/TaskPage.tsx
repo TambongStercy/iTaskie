@@ -1339,6 +1339,7 @@ const SendReportModal: React.FC<SendReportModalProps> = ({ onClose, tasks }) => 
             // Create email subject
             const subject = 'Task Report from Taskie App';
 
+
             // Send the email with PDF attachment and styled HTML
             const result = await sendPdfReport(
                 recipient.email,

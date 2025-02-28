@@ -12,8 +12,25 @@ import { init } from '@emailjs/browser';
  *    - {{subject}} - Email subject
  *    - {{message}} - Email message (will contain our styled HTML)
  *    - {{attachment_data}} - Base64 PDF data
- *    - {{attachment_name}} - Name of the attachment
- * 4. Get your EmailJS service ID, template ID, and user ID
+ *    - {{attachment_name}} - Name of the attachment (must be "task-report.pdf" for PDF reports)
+ *    - {{data_recipient_name}} - Recipient's name
+ *    - {{data_recipient_role}} - Recipient's role
+ *    - {{data_total_tasks}} - Total number of tasks
+ *    - {{data_completed_tasks}} - Number of completed tasks
+ *    - {{data_pending_tasks}} - Number of pending tasks
+ *    - {{data_generated_date}} - Report generation date
+ * 
+ * 4. IMPORTANT: In your EmailJS template, ensure you have this code to handle the attachment:
+ *    
+ *    ```
+ *    <attachment>
+ *      {
+ *        "filename": "{{attachment_name}}",
+ *        "data": "{{attachment_data}}"
+ *      }
+ *    </attachment>
+ *    ```
+ * 
  * 5. Add these to your .env file:
  *    - VITE_EMAILJS_SERVICE_ID=your_service_id
  *    - VITE_EMAILJS_TEMPLATE_ID=your_template_id 
