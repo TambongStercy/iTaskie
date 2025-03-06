@@ -149,20 +149,10 @@ export const sendPdfReport = async (
     const formattedEmailData = formatForEmailJSTemplate(emailData);
 
     try {
-        // First try using EmailJS as primary method
-        console.log('Sending email with EmailJS as primary method');
-        return await sendEmailWithEmailJS(
-            to,
-            subject,
-            textContent, // Plain text is sent as the message
-            'task-report.pdf',
-            pdfBase64,
-            formattedEmailData // Pass the formatted data with data_ prefixes
-        );
-    } catch (error) {
-        console.log('EmailJS failed, falling back to Supabase Edge Function:', error);
+        // First try using supabase as primary method
+        console.log('Sending email with supabase as primary method');
 
-        // If EmailJS fails, fall back to Supabase Edge Function
+        // If supabase fails, fall back to EmailJS
         return await sendEmail({
             to,
             subject,
@@ -177,5 +167,17 @@ export const sendPdfReport = async (
                 }
             ]
         });
-    }
+    } catch (error) {
+        console.log('supabase failed, falling back to EmailJS:', error);
+
+        // If supabase fails, fall back to EmailJS
+        return await sendEmailWithEmailJS(
+            to,
+            subject,
+            textContent, // Plain text is sent as the message
+            'task-report.pdf',
+            pdfBase64,
+            formattedEmailData // Pass the formatted data with data_ prefixes
+        );
+}
 }; 
