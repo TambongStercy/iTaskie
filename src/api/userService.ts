@@ -119,18 +119,43 @@ export const userService = {
     // Team members methods
 
     /**
-     * Get all team members from Supabase
+     * Get all team members from Supabase for the current user
      */
     async getTeamMembers(): Promise<TeamMember[]> {
         try {
-            const { data, error } = await supabase
+            // Get the current user
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                console.log('No authenticated user found');
+                throw new Error('Not authenticated');
+            }
+
+            console.log('Current user ID:', user.id);
+
+            // First, let's fetch ALL team members to see what's in the database
+            const { data: allTeamMembers, error: allError } = await supabase
                 .from('team_members')
                 .select('*');
 
+            if (allError) {
+                console.error('Error fetching all team members:', allError);
+            } else {
+                console.log('All team members in database:', allTeamMembers);
+            }
+
+            // Now fetch only the team members for the current user
+            const { data, error } = await supabase
+                .from('team_members')
+                .select('*')
+                .eq('user_id', user.id);
+
             if (error) {
+                console.error('Error fetching user team members:', error);
                 throw error;
             }
 
+            console.log('Team members for current user:', data);
             return data || [];
         } catch (error) {
             console.error('Error fetching team members:', error);
@@ -222,6 +247,97 @@ export const userService = {
             return {
                 success: false,
                 error: error.message || 'Failed to delete team member'
+            };
+        }
+    },
+
+    /**
+     * Delete team members without a user_id
+     */
+    async cleanupTeamMembers(): Promise<{ success: boolean; error?: string }> {
+        try {
+            // Get the current user
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                throw new Error('Not authenticated');
+            }
+
+            // First, let's fetch ALL team members to see what's in the database
+            const { data: allTeamMembers, error: allError } = await supabase
+                .from('team_members')
+                .select('*');
+
+            if (allError) {
+                console.error('Error fetching all team members:', allError);
+                throw allError;
+            }
+
+            console.log('All team members before cleanup:', allTeamMembers);
+
+            // Find team members without a user_id
+            const teamMembersWithoutUserId = allTeamMembers?.filter(member => !member.user_id);
+
+            if (teamMembersWithoutUserId && teamMembersWithoutUserId.length > 0) {
+                console.log('Team members without user_id:', teamMembersWithoutUserId);
+
+                // Delete team members without a user_id
+                const { error } = await supabase
+                    .from('team_members')
+                    .delete()
+                    .is('user_id', null);
+
+                if (error) {
+                    console.error('Error deleting team members without user_id:', error);
+                    throw error;
+                }
+
+                console.log('Deleted team members without user_id');
+            } else {
+                console.log('No team members without user_id found');
+            }
+
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error cleaning up team members:', error);
+            return {
+                success: false,
+                error: error.message || 'Failed to clean up team members'
+            };
+        }
+    },
+
+    /**
+     * Delete all team members (for testing purposes)
+     */
+    async deleteAllTeamMembers(): Promise<{ success: boolean; error?: string }> {
+        try {
+            // Get the current user
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                throw new Error('Not authenticated');
+            }
+
+            // Delete all team members for the current user
+            const { error } = await supabase
+                .from('team_members')
+                .delete()
+                .eq('user_id', user.id);
+
+            if (error) {
+                console.error('Error deleting all team members:', error);
+                throw error;
+            }
+
+            console.log('Deleted all team members for current user');
+
+            return { success: true };
+        } catch (error: any) {
+            console.error('Error deleting all team members:', error);
+            return {
+                success: false,
+                error: error.message || 'Failed to delete all team members'
             };
         }
     }

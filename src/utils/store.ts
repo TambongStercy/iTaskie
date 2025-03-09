@@ -21,6 +21,7 @@ export interface TeamMember {
     name: string;
     email: string;
     role: string;
+    user_id?: string; // Add user_id field to associate with the current user
 }
 
 interface TaskStore {
@@ -70,12 +71,20 @@ const mockTasks: Task[] = [
     }
 ];
 
-// Initialize with mock team members
-const mockTeamMembers: TeamMember[] = [
-    { id: 10001, name: 'Xi Jing', email: 'xijing@gmail.com', role: 'Team Leader, TL' },
-    { id: 10002, name: 'Mougnutou Ghislain', email: 'mougnutoughislain@gmail.com', role: 'Product Manager, PM' },
-    { id: 10003, name: 'Dogmo Tsiaze Emilienne', email: 'dogmotsiaze@gmail.com', role: 'Mentor' },
-];
+// Create team member store
+export const useTeamMemberStore = create<TeamMemberStore>((set) => ({
+    teamMembers: [], // Initialize with empty array instead of mock data
+    setTeamMembers: (members) => set({ teamMembers: members }),
+    addTeamMember: (member) => set((state) => ({ teamMembers: [...state.teamMembers, member] })),
+    updateTeamMember: (member) =>
+        set((state) => ({
+            teamMembers: state.teamMembers.map((m) => (m.id === member.id ? member : m)),
+        })),
+    deleteTeamMember: (memberId) =>
+        set((state) => ({
+            teamMembers: state.teamMembers.filter((m) => m.id !== memberId),
+        })),
+}));
 
 export const useTaskStore = create<TaskStore>((set) => ({
     tasks: mockTasks, // Initialize with mock tasks
@@ -93,21 +102,4 @@ export const useTaskStore = create<TaskStore>((set) => ({
         })),
     setLoading: (loading) => set({ isLoading: loading }),
     setError: (error) => set({ error }),
-}));
-
-// Create team member store
-export const useTeamMemberStore = create<TeamMemberStore>((set) => ({
-    teamMembers: mockTeamMembers,
-    setTeamMembers: (teamMembers) => set({ teamMembers }),
-    addTeamMember: (member) => set((state) => ({
-        teamMembers: [...state.teamMembers, member]
-    })),
-    updateTeamMember: (member) => set((state) => ({
-        teamMembers: state.teamMembers.map((m) =>
-            m.id === member.id ? member : m
-        ),
-    })),
-    deleteTeamMember: (memberId) => set((state) => ({
-        teamMembers: state.teamMembers.filter((m) => m.id !== memberId),
-    })),
 })); 

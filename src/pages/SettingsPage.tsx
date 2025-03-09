@@ -13,13 +13,6 @@ const ROLE_OPTIONS = [
     'Other(You can edit)'
 ];
 
-// Use the store instead of local constants
-// const TEAM_MEMBERS = [
-//     { id: 1, name: 'Xi Jing', email: 'xijing@gmail.com', role: 'Team Leader, TL' },
-//     { id: 2, name: 'Mougnutou Ghislain', email: 'mougnutoughislain@gmail.com', role: 'Product Manager, PM' },
-//     { id: 3, name: 'Dogmo Tsiaze Emilienne', email: 'dogmotsiaze@gmail.com', role: 'Mentor' },
-// ];
-
 // Password criteria component
 const PasswordCriteria: React.FC = () => {
     return (
@@ -260,7 +253,11 @@ const TeamTable: React.FC<{
                     </div>
                 ) : members.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
-                        No team members found. Add your first team member by clicking the "Add new members" button.
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <p className="text-lg font-medium mb-2">No team members yet</p>
+                        <p className="mb-4">Add team members to collaborate on tasks and projects.</p>
                     </div>
                 ) : (
                     members.map((member) => (
@@ -344,18 +341,14 @@ export const SettingsPage: React.FC = () => {
     // Fetch user profile on component mount
     useEffect(() => {
         const fetchUserProfile = async () => {
-            setIsLoading(true);
             try {
-                const userProfile = await userService.getProfile();
-                if (userProfile) {
-                    setProfile(userProfile);
+                setIsLoading(true);
+                const profile = await userService.getProfile();
+                if (profile) {
+                    setProfile(profile);
                 }
             } catch (error) {
                 console.error('Error fetching user profile:', error);
-                setStatusMessage({
-                    type: 'error',
-                    text: 'Failed to load user profile. Please try again.'
-                });
             } finally {
                 setIsLoading(false);
             }
@@ -368,19 +361,23 @@ export const SettingsPage: React.FC = () => {
     useEffect(() => {
         const fetchTeamMembers = async () => {
             try {
+                setIsLoading(true);
+
+                // First, clean up any team members without a user_id
+                await userService.cleanupTeamMembers();
+
+                // Then fetch team members for the current user
                 const members = await userService.getTeamMembers();
-                if (members.length > 0) {
-                    setTeamMembers(members);
-                }
+                setTeamMembers(members);
             } catch (error) {
                 console.error('Error fetching team members:', error);
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        if (activeTab === 'team') {
-            fetchTeamMembers();
-        }
-    }, [activeTab, setTeamMembers]);
+        fetchTeamMembers();
+    }, [setTeamMembers]);
 
     // Toggle edit mode
     const toggleEditMode = () => {
@@ -837,14 +834,67 @@ export const SettingsPage: React.FC = () => {
         </div>
     );
 
-    const renderTeamTab = () => (
-        <TeamTable
-            members={teamMembers}
-            onEdit={(memberId) => handleEditMember(memberId)}
-            onDelete={(memberId) => handleDeleteMember(memberId)}
-            isLoading={isLoading}
-        />
-    );
+    const renderTeamTab = () => {
+        // Function to handle deleting all team members
+        const handleDeleteAllTeamMembers = async () => {
+            if (confirm('Are you sure you want to delete all team members? This action cannot be undone.')) {
+                setIsLoading(true);
+                try {
+                    const result = await userService.deleteAllTeamMembers();
+                    if (result.success) {
+                        setTeamMembers([]);
+                        setStatusMessage({
+                            type: 'success',
+                            text: 'All team members deleted successfully'
+                        });
+                    } else {
+                        setStatusMessage({
+                            type: 'error',
+                            text: result.error || 'Failed to delete all team members'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error deleting all team members:', error);
+                    setStatusMessage({
+                        type: 'error',
+                        text: 'An unexpected error occurred'
+                    });
+                } finally {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        return (
+            <>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">Team Members</h2>
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={() => setShowMemberModal(true)}
+                            className="btn btn-primary"
+                            disabled={isLoading}
+                        >
+                            Add new member
+                        </button>
+                        <button
+                            onClick={handleDeleteAllTeamMembers}
+                            className="btn bg-red-500 hover:bg-red-600 text-white"
+                            disabled={isLoading}
+                        >
+                            Delete All (Testing)
+                        </button>
+                    </div>
+                </div>
+                <TeamTable
+                    members={teamMembers}
+                    onEdit={(memberId) => handleEditMember(memberId)}
+                    onDelete={(memberId) => handleDeleteMember(memberId)}
+                    isLoading={isLoading}
+                />
+            </>
+        );
+    };
 
     const renderNotificationsTab = () => (
         <div className="space-y-6">
